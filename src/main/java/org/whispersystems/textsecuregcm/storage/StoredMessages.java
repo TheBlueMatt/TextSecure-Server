@@ -16,10 +16,16 @@
  */
 package org.whispersystems.textsecuregcm.storage;
 
+import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.sqlobject.Bind;
 import org.skife.jdbi.v2.sqlobject.SqlQuery;
 import org.skife.jdbi.v2.sqlobject.SqlUpdate;
+import org.skife.jdbi.v2.sqlobject.customizers.Mapper;
+import org.skife.jdbi.v2.tweak.ResultSetMapper;
+import org.whispersystems.textsecuregcm.util.Pair;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.List;
 
 public interface StoredMessages {
@@ -27,6 +33,18 @@ public interface StoredMessages {
   @SqlUpdate("INSERT INTO stored_messages (destination_id, encrypted_message) VALUES (:destination_id, :encrypted_message)")
   void insert(@Bind("destination_id") long destinationAccountId, @Bind("encrypted_message") String encryptedOutgoingMessage);
 
-  @SqlQuery("SELECT encrypted_message FROM stored_messages WHERE destination_id = :account_id")
-  List<String> getMessagesForAccountId(@Bind("account_id") long accountId);
-}
+  @Mapper(StoredMessageMapper.class)
+  @SqlQuery("SELECT id, encrypted_message FROM stored_messages WHERE destination_id = :account_id")
+  List<Pair<Long, String>> getMessagesForAccountId(@Bind("account_id") long accountId);
+
+  @SqlUpdate("DELETE FROM stored_messages WHERE id = :id")
+  void removeStoredMessage(@Bind("id") long id);
+
+  public static class StoredMessageMapper implements ResultSetMapper<Pair<Long, String>> {
+    @Override
+    public Pair<Long, String> map(int i, ResultSet resultSet, StatementContext statementContext)
+        throws SQLException
+    {
+      return new Pair<>(resultSet.getLong("id"), resultSet.getString("encrypted_message"));
+    }
+  }}

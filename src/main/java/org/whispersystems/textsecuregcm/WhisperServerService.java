@@ -20,11 +20,13 @@ import com.google.common.base.Optional;
 import com.yammer.dropwizard.Service;
 import com.yammer.dropwizard.config.Bootstrap;
 import com.yammer.dropwizard.config.Environment;
+import com.yammer.dropwizard.config.HttpConfiguration;
 import com.yammer.dropwizard.db.DatabaseConfiguration;
 import com.yammer.dropwizard.jdbi.DBIFactory;
 import com.yammer.dropwizard.migrations.MigrationsBundle;
 import com.yammer.metrics.reporting.GraphiteReporter;
 import net.spy.memcached.MemcachedClient;
+import org.atmosphere.cpr.AtmosphereServlet;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.skife.jdbi.v2.DBI;
 import org.whispersystems.textsecuregcm.auth.DeviceAuthenticator;
@@ -32,6 +34,7 @@ import org.whispersystems.textsecuregcm.auth.FederatedPeerAuthenticator;
 import org.whispersystems.textsecuregcm.auth.MultiBasicAuthProvider;
 import org.whispersystems.textsecuregcm.configuration.NexmoConfiguration;
 import org.whispersystems.textsecuregcm.controllers.AccountController;
+import org.whispersystems.textsecuregcm.controllers.atmosphere.MessageSocketController;
 import org.whispersystems.textsecuregcm.controllers.DeviceController;
 import org.whispersystems.textsecuregcm.controllers.AttachmentController;
 import org.whispersystems.textsecuregcm.controllers.DirectoryController;
@@ -93,6 +96,8 @@ public class WhisperServerService extends Service<WhisperServerConfiguration> {
   public void run(WhisperServerConfiguration config, Environment environment)
       throws Exception
   {
+    config.getHttpConfiguration().setConnectorType(HttpConfiguration.ConnectorType.NONBLOCKING);
+
     DBIFactory dbiFactory = new DBIFactory();
     DBI        jdbi       = dbiFactory.build(environment, config.getDatabaseConfiguration(), "postgresql");
 
@@ -133,6 +138,13 @@ public class WhisperServerService extends Service<WhisperServerConfiguration> {
     environment.addResource(new AttachmentController(rateLimiters, federatedClientManager, urlSigner));
     environment.addResource(new KeysController(rateLimiters, keys, accountsManager, federatedClientManager));
     environment.addResource(new FederationController(keys, accountsManager, pushSender, urlSigner));
+
+    MessageSocketController.storedMessageManager = storedMessageManager;
+    MessageSocketController.deviceAuthenticator = deviceAuthenticator;
+    AtmosphereServlet atmosphereServlet = new AtmosphereServlet();
+    atmosphereServlet.framework().addInitParameter("com.sun.jersey.config.property.packages", "org.whispersystems.textsecuregcm.controllers.atmosphere");
+    atmosphereServlet.framework().addInitParameter("org.atmosphere.websocket.messageContentType", "application/json");
+    environment.addServlet(atmosphereServlet, "/v1/messagesocket/*");
 
     environment.addServlet(new MessageController(rateLimiters, deviceAuthenticator,
                                                  pushSender, accountsManager, federatedClientManager),

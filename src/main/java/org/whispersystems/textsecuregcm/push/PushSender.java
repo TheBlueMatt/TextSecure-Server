@@ -16,7 +16,6 @@
  */
 package org.whispersystems.textsecuregcm.push;
 
-import com.google.common.base.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.whispersystems.textsecuregcm.configuration.ApnConfiguration;
@@ -35,9 +34,6 @@ import java.io.IOException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 public class PushSender {
 
@@ -102,6 +98,6 @@ public class PushSender {
   }
 
   private void storeFetchedMessage(Device device, EncryptedOutgoingMessage outgoingMessage) throws IOException {
-    storedMessageManager.storeMessage(device, outgoingMessage);
+    storedMessageManager.sendMessage(device, outgoingMessage);
   }
 }

@@ -20,6 +20,7 @@ package org.whispersystems.textsecuregcm.auth;
 import org.whispersystems.textsecuregcm.util.Base64;
 import org.whispersystems.textsecuregcm.util.Util;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 
 public class AuthorizationHeader {
@@ -45,7 +46,7 @@ public class AuthorizationHeader {
     }
   }
 
-  public static AuthorizationHeader fromFullHeader(String header) throws InvalidAuthorizationHeaderException {
+  public static AuthorizationHeader fromFullHeader(@Nullable String header) throws InvalidAuthorizationHeaderException {
     try {
       if (header == null) {
         throw new InvalidAuthorizationHeaderException("Null header");

@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 import org.whispersystems.textsecuregcm.storage.Device;
 import org.whispersystems.textsecuregcm.storage.AccountsManager;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.concurrent.TimeUnit;
 
 public class DeviceAuthenticator implements Authenticator<BasicCredentials, Device> {
@@ -70,5 +71,20 @@ public class DeviceAuthenticator implements Authenticator<BasicCredentials, Devi
 
     authenticationFailedMeter.mark();
     return Optional.absent();
+  }
+
+  public Device authenticate(HttpServletRequest request) throws AuthenticationException {
+    try {
+      AuthorizationHeader authorizationHeader = AuthorizationHeader.fromFullHeader(request.getHeader("Authorization"));
+      BasicCredentials    credentials         = new BasicCredentials(authorizationHeader.getNumber() + "." + authorizationHeader.getDeviceId(),
+                                                                     authorizationHeader.getPassword()  );
+
+      Optional<Device> account = authenticate(credentials);
+
+      if (account.isPresent()) return account.get();
+      else                     throw new AuthenticationException("Bad credentials");
+    } catch (InvalidAuthorizationHeaderException e) {
+      throw new AuthenticationException(e);
+    }
   }
 }
