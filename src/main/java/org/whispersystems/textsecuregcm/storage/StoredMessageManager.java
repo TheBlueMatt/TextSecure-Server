@@ -32,6 +32,9 @@ import java.io.PrintWriter;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 public class StoredMessageManager {
   private class Writer {
@@ -79,6 +82,7 @@ public class StoredMessageManager {
 
   StoredMessages storedMessages;
   private final Map<Pair<String, Long>, Writer> messageWriters = Collections.synchronizedMap(new HashMap<Pair<String, Long>, Writer>());
+  private ScheduledExecutorService futureTimeoutExecutor = new ScheduledThreadPoolExecutor(2);
 
   public StoredMessageManager(StoredMessages storedMessages) {
     this.storedMessages = storedMessages;
@@ -134,8 +138,7 @@ public class StoredMessageManager {
    * scope.
    */
   private SettableFuture<Boolean> writeMessage(final Device destination, String message) {
-    //TODO: future timeout
-    SettableFuture<Boolean> future = SettableFuture.create();
+    final SettableFuture<Boolean> future = SettableFuture.create();
     final Writer writer = messageWriters.get(new Pair<>(destination.getNumber(), destination.getDeviceId()));
     if (writer != null) {
       try {
@@ -148,6 +151,12 @@ public class StoredMessageManager {
       disconnect(destination);
       future.set(false);
     }
+    futureTimeoutExecutor.schedule(new Runnable() {
+      @Override
+      public void run() {
+        future.set(false);
+      }
+    }, 10, TimeUnit.SECONDS);
     return future;
   }
 }
