@@ -17,6 +17,7 @@
 package org.whispersystems.textsecuregcm.controllers;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.protobuf.ByteString;
@@ -331,8 +332,12 @@ public class MessageController extends HttpServlet {
       content.append(line);
     }
 
-    IncomingMessageList messages = objectMapper.readValue(content.toString(),
-                                                          IncomingMessageList.class);
+    IncomingMessageList messages;
+    try {
+      messages = objectMapper.readValue(content.toString(), IncomingMessageList.class);
+    } catch (JsonMappingException e) {
+      throw new ValidationException();
+    }
 
     if (messages.getMessages() == null) {
       throw new ValidationException();
